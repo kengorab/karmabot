@@ -1,0 +1,10 @@
+{
+  "name": "karmabot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "devDependencies": {
+    "ts-node": "^6.1.2",
+    "typescript": "^2.9.2"
+  }
+}
