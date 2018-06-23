@@ -14,10 +14,11 @@
     "alwaysStrict": true,
 
     /* Additional Checks */
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    // "noUnusedLocals": true,
+    // "noUnusedParameters": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
+    "noEmitOnError": false,
 
     /* Module Resolution Options */
     "moduleResolution": "node",
