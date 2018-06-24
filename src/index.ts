@@ -3,12 +3,23 @@ import dotenv from 'dotenv'
 import { keyBy } from 'lodash'
 import { messageHandler } from './message-handler'
 
-// Load in .env file
-dotenv.config()
+const BOT_NAME = 'karmabot'
+
+// Load in .env file, and extract TOKEN value
+const { error } = dotenv.config()
+if (error) {
+  console.error(`Could not start ${BOT_NAME} due to lack of .env file:`, error)
+  process.exit(1)
+}
+const { TOKEN: token } = process.env
+if (!token) {
+  console.error(`Could not start ${BOT_NAME} due to missing TOKEN value`)
+  process.exit(1)
+}
 
 const bot = new SlackBot({
-  token: process.env.TOKEN as string,
-  name: 'karmabot'
+  token: token as string,
+  name: BOT_NAME
 })
 
 const params = { icon_emoji: ':scale:', as_user: true }
