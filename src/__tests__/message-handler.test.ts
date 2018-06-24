@@ -1,64 +1,11 @@
 import SlackBot, { MessageEvent, Channel } from 'slackbots'
 import { HandlerConfig } from '../../types/karmabot'
 import * as MessageHandler from '../message-handler'
+import * as MessageGenerator from '../message-generator'
 import * as Detector from '../detector'
 import { mock } from './test-utils'
 
 describe('message-handler', () => {
-  describe('getMessage', () => {
-    describe('in Buzzkill Mode™️', () => {
-      it('returns the message for delta = 1', () => {
-        const message = MessageHandler.getMessage(true, 1, 2, 'Ken')
-        expect(message).toEqual(
-          'Buzzkill Mode™️ activated! Only adding 1 point.\nKen has 2 points'
-        )
-      })
-
-      it('returns the message for delta = -1', () => {
-        const message = MessageHandler.getMessage(true, -1, 2, 'Ken')
-        expect(message).toEqual(
-          'Buzzkill Mode™️ activated! Only subtracting 1 point.\nKen has 2 points'
-        )
-      })
-
-      it('returns the message for delta > 1', () => {
-        const message = MessageHandler.getMessage(true, 4, 2, 'Ken')
-        expect(message).toEqual(
-          'Buzzkill Mode™️ activated! Only adding 4 points.\nKen has 2 points'
-        )
-      })
-
-      it('returns the message for delta < -1', () => {
-        const message = MessageHandler.getMessage(true, -4, 2, 'Ken')
-        expect(message).toEqual(
-          'Buzzkill Mode™️ activated! Only subtracting 4 points.\nKen has 2 points'
-        )
-      })
-    })
-
-    describe('not in Buzzkill Mode™️', () => {
-      it('returns the message for delta = 1', () => {
-        const message = MessageHandler.getMessage(false, 1, 2, 'Ken')
-        expect(message).toEqual('Ken got 1 point, and now has 2')
-      })
-
-      it('returns the message for delta = -1', () => {
-        const message = MessageHandler.getMessage(false, -1, 2, 'Ken')
-        expect(message).toEqual('Ken lost 1 point, and now has 2')
-      })
-
-      it('returns the message for delta > 1', () => {
-        const message = MessageHandler.getMessage(false, 4, 2, 'Ken')
-        expect(message).toEqual('Ken got 4 points, and now has 2')
-      })
-
-      it('returns the message for delta < -1', () => {
-        const message = MessageHandler.getMessage(false, -4, 2, 'Ken')
-        expect(message).toEqual('Ken lost 4 points, and now has 2')
-      })
-    })
-  })
-
   describe('messageHandler', () => {
     let bot: SlackBot
     let config: HandlerConfig
@@ -102,6 +49,22 @@ describe('message-handler', () => {
 
     it("returns false if data.type is not 'message', and doesn't proceed", async () => {
       const messageBody = { username: 'not-mockbot', type: 'not-message' }
+      const response = await MessageHandler.messageHandler(
+        config,
+        messageBody as MessageEvent
+      )
+
+      expect(response).toBe(false)
+      expect(config.modifyKarma).not.toHaveBeenCalled()
+      expect(bot.postMessageToChannel).not.toHaveBeenCalled()
+    })
+
+    it("returns false if data.bot_id is present, and doesn't proceed", async () => {
+      const messageBody = {
+        username: 'not-mockbot',
+        type: 'message',
+        bot_id: 'asdf-qwer'
+      }
       const response = await MessageHandler.messageHandler(
         config,
         messageBody as MessageEvent
@@ -158,7 +121,7 @@ describe('message-handler', () => {
       expect(bot.postMessageToChannel).not.toHaveBeenCalled()
     })
 
-    it('calls to modifyKarma for karma target if it exists', async () => {
+    it('calls to modifyKarma for karma target if it exists and is not targeting self', async () => {
       mock(Detector, 'getKarmaTarget', () => ({
         target: 'Nemo',
         amount: 1,
@@ -181,11 +144,50 @@ describe('message-handler', () => {
       expect(config.modifyKarma).toHaveBeenCalledWith('Nemo', 1)
     })
 
-    it('returns true and calls `bot.postMessageToChannel` if everything goes well', async () => {
+    it('returns true and calls `bot.postMessageToChannel` with non-self-targeted message if everything goes well', async () => {
       mock(Detector, 'getKarmaTarget', () => ({
         target: 'Nemo',
         amount: 1,
-        isBuzzkill: false
+        isBuzzkill: false,
+        isTargetingSelf: false
+      }))
+      mock(MessageGenerator, 'getMessage', () => 'Fake message!!!')
+
+      // Mock config functions
+      const _config = {
+        ...config,
+        getChannel: () => Promise.resolve({ name: 'fake-channel' } as Channel),
+        modifyKarma: () => 12,
+        getParams: () => ({ icon_emoji: ':fish:' })
+      }
+
+      const messageBody = {
+        username: 'not-mockbot',
+        type: 'message',
+        text: "whatever text, it doesn't matter"
+      }
+      const response = await MessageHandler.messageHandler(
+        _config,
+        messageBody as MessageEvent
+      )
+
+      expect(response).toBe(true)
+      expect(bot.postMessageToChannel).toHaveBeenCalledWith(
+        'fake-channel',
+        'Fake message!!!',
+        { icon_emoji: ':fish:' }
+      )
+    })
+
+    it('returns true and calls `bot.postMessageToChannel` with self-targeted message if everything goes well', async () => {
+      mock(Detector, 'getKarmaTarget', () => ({
+        target: 'Nemo',
+        amount: 1,
+        isBuzzkill: false,
+        isTargetingSelf: true
+      }))
+      mock(MessageGenerator, 'getSelfTargetingMessage', () => ({
+        message: 'Fake self-targeting message!!!'
       }))
 
       // Mock config functions
@@ -209,7 +211,46 @@ describe('message-handler', () => {
       expect(response).toBe(true)
       expect(bot.postMessageToChannel).toHaveBeenCalledWith(
         'fake-channel',
-        'Nemo got 1 point, and now has 12',
+        'Fake self-targeting message!!!',
+        { icon_emoji: ':fish:' }
+      )
+    })
+
+    it('returns true and calls `bot.postMessageToChannel` with self-targeted message if everything goes well, and awards karma if necessary', async () => {
+      mock(Detector, 'getKarmaTarget', () => ({
+        target: 'Nemo',
+        amount: 1,
+        isBuzzkill: false,
+        isTargetingSelf: true
+      }))
+      mock(MessageGenerator, 'getSelfTargetingMessage', () => ({
+        message: 'Fake self-targeting message!!!',
+        karmaChange: -1
+      }))
+
+      // Mock config functions
+      const _config = {
+        ...config,
+        getChannel: () => Promise.resolve({ name: 'fake-channel' } as Channel),
+        modifyKarma: jest.fn(() => 12),
+        getParams: () => ({ icon_emoji: ':fish:' })
+      }
+
+      const messageBody = {
+        username: 'not-mockbot',
+        type: 'message',
+        text: "whatever text, it doesn't matter"
+      }
+      const response = await MessageHandler.messageHandler(
+        _config,
+        messageBody as MessageEvent
+      )
+
+      expect(response).toBe(true)
+      expect(_config.modifyKarma).toHaveBeenCalledWith('Nemo', -1)
+      expect(bot.postMessageToChannel).toHaveBeenCalledWith(
+        'fake-channel',
+        'Fake self-targeting message!!!',
         { icon_emoji: ':fish:' }
       )
     })

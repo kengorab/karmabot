@@ -6,6 +6,7 @@ declare module 'slackbots' {
 
   interface PostMessageParams {
     icon_emoji: string
+    as_user?: boolean
   }
 
   interface MessageEvent {

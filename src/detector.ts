@@ -3,9 +3,13 @@ export interface KarmaTarget {
   target: string
   amount: number
   isBuzzkill: boolean
+  isTargetingSelf: boolean
 }
 
-export function getKarmaTarget(input: string): KarmaTarget | null {
+export function getKarmaTarget(
+  input: string,
+  user: string
+): KarmaTarget | null {
   // Tokenize by white-space, or by any quoted string, or by slack user mentions (which are followed by a space)
   const parts = input.match(
     /(?:\<\@\w+\>\s*|[^\s"]+|"(?:\\"|[^"])+")(?:\+*\-*)/g
@@ -35,7 +39,8 @@ export function getKarmaTarget(input: string): KarmaTarget | null {
     return {
       target: target.trim(),
       amount: clamp(amount, -4, 4),
-      isBuzzkill: ops.length > 5
+      isBuzzkill: ops.length > 5,
+      isTargetingSelf: target.trim() === `<@${user}>`
     }
   }
 

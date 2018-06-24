@@ -11,7 +11,7 @@ const bot = new SlackBot({
   name: 'karmabot'
 })
 
-const params = { icon_emoji: ':scale:' }
+const params = { icon_emoji: ':scale:', as_user: true }
 
 const channels = bot.getChannels().then(({ channels }) => keyBy(channels, 'id'))
 
