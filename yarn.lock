@@ -34,6 +34,12 @@
   version "10.3.5"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-10.3.5.tgz#8423cdf6e6fb83433e489900d7600d3b61c8260c"
 
+"@types/pg-escape@^0.2.0":
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/@types/pg-escape/-/pg-escape-0.2.0.tgz#90d5d96e65c5994b81e145dc465c7615466de05d"
+  dependencies:
+    "@types/node" "*"
+
 abab@^1.0.4:
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/abab/-/abab-1.0.4.tgz#5faad9c2c07f60dd76770f71cf025b62a63cfd4e"
@@ -2505,6 +2511,10 @@ mkdirp@^0.5.0, mkdirp@^0.5.1:
   dependencies:
     minimist "0.0.8"
 
+moment@^2.22.2:
+  version "2.22.2"
+  resolved "https://registry.yarnpkg.com/moment/-/moment-2.22.2.tgz#3c257f9839fc0e93ff53149632239eb90783ff66"
+
 ms@2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/ms/-/ms-2.0.0.tgz#5608aeadfc00be6c2901df5f9861788de0d597c8"
@@ -2512,6 +2522,10 @@ ms@2.0.0:
 nan@^2.9.2:
   version "2.10.0"
   resolved "https://registry.yarnpkg.com/nan/-/nan-2.10.0.tgz#96d0cd610ebd58d4b4de9cc0c6828cda99c7548f"
+
+nan@~2.9.2:
+  version "2.9.2"
+  resolved "https://registry.yarnpkg.com/nan/-/nan-2.9.2.tgz#f564d75f5f8f36a6d9456cca7a6c4fe488ab7866"
 
 nanomatch@^1.2.9:
   version "1.2.9"
@@ -2558,6 +2572,21 @@ node-notifier@^5.2.1:
 node-pre-gyp@^0.10.0:
   version "0.10.0"
   resolved "https://registry.yarnpkg.com/node-pre-gyp/-/node-pre-gyp-0.10.0.tgz#6e4ef5bb5c5203c6552448828c852c40111aac46"
+  dependencies:
+    detect-libc "^1.0.2"
+    mkdirp "^0.5.1"
+    needle "^2.2.0"
+    nopt "^4.0.1"
+    npm-packlist "^1.1.6"
+    npmlog "^4.0.2"
+    rc "^1.1.7"
+    rimraf "^2.6.1"
+    semver "^5.3.0"
+    tar "^4"
+
+node-pre-gyp@~0.9.0:
+  version "0.9.1"
+  resolved "https://registry.yarnpkg.com/node-pre-gyp/-/node-pre-gyp-0.9.1.tgz#f11c07516dd92f87199dbc7e1838eab7cd56c9e0"
   dependencies:
     detect-libc "^1.0.2"
     mkdirp "^0.5.1"
@@ -2843,6 +2872,10 @@ pause-stream@0.0.11:
 performance-now@^2.1.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/performance-now/-/performance-now-2.1.0.tgz#6309f4e0e5fa913ec1c69307ae364b4b377c9e7b"
+
+pg-escape@^0.2.0:
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/pg-escape/-/pg-escape-0.2.0.tgz#65594c1691659b4ab6e0cbbf9d50744be474998e"
 
 pify@^2.0.0:
   version "2.3.0"
@@ -3359,6 +3392,19 @@ split@0.3:
 sprintf-js@~1.0.2:
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/sprintf-js/-/sprintf-js-1.0.3.tgz#04e6926f662895354f3dd015203633b857297e2c"
+
+sqlite3@4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/sqlite3/-/sqlite3-4.0.0.tgz#cc0e093ab51873f50d9dfc4126fcbef15d486570"
+  dependencies:
+    nan "~2.9.2"
+    node-pre-gyp "~0.9.0"
+
+sqlite@^2.9.2:
+  version "2.9.2"
+  resolved "https://registry.yarnpkg.com/sqlite/-/sqlite-2.9.2.tgz#fcda8f035f22726cf3e81aab9058fdc515c3b9d6"
+  dependencies:
+    sqlite3 "4.0.0"
 
 sshpk@^1.7.0:
   version "1.14.2"

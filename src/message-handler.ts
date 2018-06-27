@@ -1,10 +1,10 @@
 import { MessageEvent } from 'slackbots'
 import { getKarmaTarget } from './detector'
-import { HandlerConfig } from '../types/karmabot'
+import HandlerContext from './context-manager'
 import { getMessage, getSelfTargetingMessage } from './message-generator'
 
 export async function messageHandler(
-  { bot, log, getParams, getChannel, modifyKarma }: HandlerConfig,
+  { bot, log, getParams, getChannel, modifyKarma }: HandlerContext,
   data: MessageEvent
 ): Promise<boolean> {
   log(data)
@@ -13,7 +13,9 @@ export async function messageHandler(
     return false
 
   const { text, user } = data
-  const karmaTarget = getKarmaTarget(text, user || '')
+  if (!user) return false
+
+  const karmaTarget = getKarmaTarget(text, user)
   if (!karmaTarget) return false
 
   const channel = await getChannel(data.channel)
@@ -27,10 +29,10 @@ export async function messageHandler(
     message = m
 
     if (karmaChange) {
-      modifyKarma(target, karmaChange)
+      modifyKarma(target, karmaChange, bot.name)
     }
   } else {
-    const total = modifyKarma(target, amount)
+    const total = await modifyKarma(target, amount, user)
     message = getMessage(isBuzzkill, amount, total, target)
   }
 
