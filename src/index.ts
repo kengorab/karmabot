@@ -1,8 +1,7 @@
 import SlackBot from 'slackbots'
+import express from 'express'
 import dotenv from 'dotenv'
-import { keyBy } from 'lodash'
 import { messageHandler } from './message-handler'
-import * as KarmaDao from './karma-dao'
 import HandlerContext from './context-manager'
 
 const BOT_NAME = 'karmabot'
@@ -19,6 +18,14 @@ if (!token) {
   process.exit(1)
 }
 
+// Tiny express server to report health
+const app = express()
+app.get('/healthCheck', (req, res) => res.send({ status: 'ok' }))
+
+const port = process.env.PORT || 4000
+app.listen(port, () => console.log('Server listening on :4000...'))
+
+// Build and configure bot
 const bot = new SlackBot({
   token: token as string,
   name: BOT_NAME
