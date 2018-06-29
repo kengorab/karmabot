@@ -1,32 +1,39 @@
-import sqlite from 'sqlite'
 import * as fs from 'fs'
 import { promisify } from 'util'
+import alasql from 'alasql'
 import { pick, zip } from 'lodash'
 import moment from 'moment'
+import { Client } from 'pg'
 import * as KarmaDao from '../karma-dao'
 
 const readFileAsync = promisify(fs.readFile)
 
 describe('KarmaDao', () => {
-  let testDbPromise: Promise<sqlite.Database>
-  beforeAll(async () => {
+  let testDbPromise: Promise<Client>
+
+  beforeEach(async () => {
     const sqlFile = `${__dirname}/../../db/001-create-tables.sql`
     const createTablesSql = await readFileAsync(sqlFile, { encoding: 'utf-8' })
 
-    testDbPromise = sqlite.open('./test-db.sqlite', { promise: Promise })
-    const db = await testDbPromise
-    await db.exec(createTablesSql)
+    await alasql(createTablesSql)
+
+    const mockClient = {
+      connect: () => Promise.resolve(null),
+      query: async (inputSql: string, values: any[]) => {
+        const sql = inputSql.replace(/\$\d/g, match => {
+          const idx = parseInt(match.replace('$', '')) - 1
+          const value = values[idx]
+
+          return typeof value === 'string' ? `'${value}'` : value
+        })
+        const rows = await alasql(sql)
+        return { rows }
+      }
+    } as Client
+    testDbPromise = Promise.resolve(mockClient)
   })
 
-  afterEach(async () => {
-    const db = await testDbPromise
-    db.exec('delete from karma_transactions;')
-  })
-
-  afterAll(async () => {
-    const db = await testDbPromise
-    db.exec('drop table if exists karma_transactions;')
-  })
+  afterEach(async () => await alasql('drop table karma_transactions;'))
 
   describe('getKarmaTarget', () => {
     it('should return KarmaTarget (with total as 0) for target with no transactions', async () => {
@@ -38,8 +45,7 @@ describe('KarmaDao', () => {
     })
 
     it('should return KarmaTarget with summed total', async () => {
-      const db = await testDbPromise
-      await db.exec(`
+      await alasql(`
         insert into karma_transactions (karma_target, delta, actor)
         values ('Claudio', 3, 'Ken'), ('Claudio', -1, 'Someone Else');
       `)
@@ -55,8 +61,7 @@ describe('KarmaDao', () => {
   describe('modifyKarma', () => {
     it('should insert a transaction into the database for a new target', async () => {
       await KarmaDao.modifyKarma('Claudio', 3, 'Ken', testDbPromise)
-      const db = await testDbPromise
-      const rows = await db.all('select * from karma_transactions;')
+      const rows = await alasql('select * from karma_transactions;')
 
       const expected = [
         {
@@ -64,7 +69,7 @@ describe('KarmaDao', () => {
           actor: 'Ken',
           delta: 3,
           karma_target: 'Claudio',
-          karma_date: moment().valueOf()
+          karma_date: Date.now()
         }
       ]
       zip(expected, rows).forEach(([e, a]) => assertTransactionsEq(e, a))
@@ -73,8 +78,7 @@ describe('KarmaDao', () => {
     it('should insert a transaction into the database for an existing target', async () => {
       await KarmaDao.modifyKarma('Claudio', 3, 'Ken', testDbPromise)
       await KarmaDao.modifyKarma('Claudio', -2, 'Someone Else', testDbPromise)
-      const db = await testDbPromise
-      const rows = await db.all('select * from karma_transactions;')
+      const rows = await alasql('select * from karma_transactions;')
 
       const expected = [
         {
@@ -82,14 +86,14 @@ describe('KarmaDao', () => {
           actor: 'Ken',
           delta: 3,
           karma_target: 'Claudio',
-          karma_date: moment().valueOf()
+          karma_date: Date.now()
         },
         {
           id: 2,
           actor: 'Someone Else',
           delta: -2,
           karma_target: 'Claudio',
-          karma_date: moment().valueOf()
+          karma_date: Date.now()
         }
       ]
       zip(expected, rows).forEach(([e, a]) => assertTransactionsEq(e, a))
@@ -102,8 +106,9 @@ function assertTransactionsEq(expected, actual) {
     pick(expected, 'id', 'actor', 'delta', 'karma_target')
   )
 
+  const dbFormatStr = 'YYYY.MM.DD HH:mm:ss.SSS'
   const timeDiff = moment(expected.karma_date).diff(
-    moment(actual.karma_date),
+    moment(actual.karma_date, dbFormatStr),
     'milliseconds'
   )
   expect(timeDiff).toBeLessThan(200)
