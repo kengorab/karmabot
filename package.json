@@ -11,7 +11,7 @@
     "start:dev": "nodemon --exec ts-node src/index.ts",
     "predocker": "yarn build",
     "docker": "docker build -t karmabot .",
-    "predeploy": "yarn test",
+    "predeploy": "yarn test && yarn build",
     "deploy": "heroku container:push web --app karmaboy && heroku container:release web --app karmaboy",
     "test": "jest"
   },
