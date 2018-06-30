@@ -18,7 +18,7 @@ export function getKarmaTarget(
 
   for (let part of parts) {
     // First attempt to match slack users (<@asdf> format)
-    let matches = part.match(/(\<\@\w+\>\s*)(\+*\-*)/)
+    let matches = part.match(/(\<\@\w+\>\s*)(\+{2,}|\-{2,})/)
     if (!matches) {
       // Attempt to match non-quoted-string possibility...
       matches = part.match(/([^\s"+-]+(?:[+-][^\s"+-]+)*)(\+{2,}|\-{2,})/)

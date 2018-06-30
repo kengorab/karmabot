@@ -181,6 +181,11 @@ describe('detector', () => {
           expect(amount).toEqual(expected)
         })
       })
+
+      it('should not detect an amount if there are no + or - signs', () => {
+        const karmaTarget = getKarmaTarget('<@UAEB34D> what?', user)!
+        expect(karmaTarget).toBe(null)
+      })
     })
 
     describe('isBuzzkill detection', () => {
