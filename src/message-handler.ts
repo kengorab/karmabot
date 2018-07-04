@@ -108,6 +108,8 @@ export async function handleBotCommand(
         `There are also special commands that ${name} supports which you can invoke by saying \`@${name} <command>\`:`,
         '    `top`: Display the top 5 things with the highest karma',
         '    `top <number>`: Display the top `<number>` things with the highest karma',
+        '    `bottom`: Display the bottom 5 things with the lowest karma',
+        '    `bottom <number>`: Display the bottom `<number>` things with the lowest karma',
         '    `help`: Display this information'
       ].join('\n')
       break
