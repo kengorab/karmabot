@@ -256,13 +256,33 @@ describe('detector', () => {
         expect(cmd).toEqual({ type: BotCommandType.TOP })
       })
 
+      it('should return a BOTTOM command if the input is bottom', () => {
+        const cmd = getBotCommand(`<@${botId}> bottom`)
+        expect(cmd).toEqual({ type: BotCommandType.BOTTOM })
+      })
+
       it('should return a TOP_N command, with payload of `n`, if the input is top <number>', () => {
         const cmd = getBotCommand(`<@${botId}> top 5`)
         expect(cmd).toEqual({ type: BotCommandType.TOP_N, payload: 5 })
       })
 
+      it('should return a BOTTOM_N command, with payload of `n`, if the input is bottom <number>', () => {
+        const cmd = getBotCommand(`<@${botId}> bottom 5`)
+        expect(cmd).toEqual({ type: BotCommandType.BOTTOM_N, payload: 5 })
+      })
+
+      it('should return a HELP command, if the input is help', () => {
+        const cmd = getBotCommand(`<@${botId}> help`)
+        expect(cmd).toEqual({ type: BotCommandType.HELP })
+      })
+
       it('should fail if the `top_n` command is given a non-number arg', () => {
         const cmd = getBotCommand(`<@${botId}> top five`)
+        expect(cmd).toEqual({ type: BotCommandType.UNKNOWN })
+      })
+
+      it('should fail if the `bottom_n` command is given a non-number arg', () => {
+        const cmd = getBotCommand(`<@${botId}> bottom five`)
         expect(cmd).toEqual({ type: BotCommandType.UNKNOWN })
       })
 

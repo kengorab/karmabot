@@ -55,6 +55,9 @@ export function isBotCommand(input: string, botUserId: string): boolean {
 export enum BotCommandType {
   TOP,
   TOP_N,
+  BOTTOM,
+  BOTTOM_N,
+  HELP,
   UNKNOWN
 }
 
@@ -71,19 +74,25 @@ export function getBotCommand(input: string): BotCommand {
 
   switch (cmdSegments[0]) {
     case 'top':
+    case 'bottom':
       if (cmdSegments[1]) {
         const count = parseInt(cmdSegments[1])
         if (count) {
-          return {
-            type: BotCommandType.TOP_N,
-            payload: parseInt(cmdSegments[1])
-          }
+          const type =
+            cmdSegments[0] === 'top'
+              ? BotCommandType.TOP_N
+              : BotCommandType.BOTTOM_N
+          return { type, payload: parseInt(cmdSegments[1]) }
         } else {
           return { type: BotCommandType.UNKNOWN }
         }
       } else {
-        return { type: BotCommandType.TOP }
+        const type =
+          cmdSegments[0] === 'top' ? BotCommandType.TOP : BotCommandType.BOTTOM
+        return { type }
       }
+    case 'help':
+      return { type: BotCommandType.HELP }
     default:
       return { type: BotCommandType.UNKNOWN }
   }

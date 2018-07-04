@@ -203,7 +203,9 @@ describe('message-handler', () => {
       expect(bot.postMessageToChannel).toHaveBeenCalledWith(
         'fake-channel',
         'Fake message!!!',
-        { icon_emoji: ':fish:' }
+        {
+          icon_emoji: ':fish:'
+        }
       )
     })
 
@@ -293,14 +295,17 @@ describe('message-handler', () => {
   })
 
   describe('handleBotCommand', () => {
+    const entries = [
+      new KarmaDao.KarmaTarget('Name 1', 5),
+      new KarmaDao.KarmaTarget('Name 2', 4),
+      new KarmaDao.KarmaTarget('Name 3', 3),
+      new KarmaDao.KarmaTarget('Name 4', 2),
+      new KarmaDao.KarmaTarget('Name 5', 1)
+    ]
+
     it('should send a "ranked" message with top 5, if the command is just `top`', async () => {
-      mock(KarmaDao, 'getRankedKarmaTargets', () => [
-        new KarmaDao.KarmaTarget('Name 1', 5),
-        new KarmaDao.KarmaTarget('Name 2', 4),
-        new KarmaDao.KarmaTarget('Name 3', 3),
-        new KarmaDao.KarmaTarget('Name 4', 2),
-        new KarmaDao.KarmaTarget('Name 5', 1)
-      ])
+      const getRankedKarmaTargetsMock = jest.fn().mockResolvedValue(entries)
+      mock(KarmaDao, 'getRankedKarmaTargets', getRankedKarmaTargetsMock)
 
       const _context = {
         ...context,
@@ -316,6 +321,11 @@ describe('message-handler', () => {
         'fake-channel'
       )
 
+      expect(getRankedKarmaTargetsMock).toHaveBeenCalledWith(
+        5,
+        KarmaDao.RankType.TOP
+      )
+
       const message = [
         'Name 1: 5 points',
         'Name 2: 4 points',
@@ -326,11 +336,145 @@ describe('message-handler', () => {
       expect(_context.bot.postMessageToChannel).toHaveBeenCalledWith(
         'fake-channel',
         message,
-        { icon_emoji: ':fish:' }
+        {
+          icon_emoji: ':fish:'
+        }
       )
     })
 
-    it('should send an "unknown message" command if the command is unknown', () => {
+    it('should send a "ranked" message with top 2, if the command is `top 2`', async () => {
+      const value = entries.slice(0, 2)
+      const getRankedKarmaTargetsMock = jest.fn().mockResolvedValue(value)
+      mock(KarmaDao, 'getRankedKarmaTargets', getRankedKarmaTargetsMock)
+
+      const _context = {
+        ...context,
+        getChannel: () => Promise.resolve({ name: 'fake-channel' } as Channel),
+        getUser: () => Promise.resolve({ id: 'qowieur', name: 'fake name' }),
+        modifyKarma: jest.fn(() => 12),
+        getParams: () => ({ icon_emoji: ':fish:' })
+      }
+
+      await MessageHandler.handleBotCommand(
+        _context,
+        { type: Detector.BotCommandType.TOP_N, payload: 2 },
+        'fake-channel'
+      )
+
+      expect(getRankedKarmaTargetsMock).toHaveBeenCalledWith(
+        2,
+        KarmaDao.RankType.TOP
+      )
+
+      const message = 'Name 1: 5 points\nName 2: 4 points'
+      expect(_context.bot.postMessageToChannel).toHaveBeenCalledWith(
+        'fake-channel',
+        message,
+        {
+          icon_emoji: ':fish:'
+        }
+      )
+    })
+
+    it('should send a "ranked" message with bottom 5, if the command is just `bottom`', async () => {
+      const value = [...entries].reverse()
+      const getRankedKarmaTargetsMock = jest.fn().mockResolvedValue(value)
+      mock(KarmaDao, 'getRankedKarmaTargets', getRankedKarmaTargetsMock)
+
+      const _context = {
+        ...context,
+        getChannel: () => Promise.resolve({ name: 'fake-channel' } as Channel),
+        getUser: () => Promise.resolve({ id: 'qowieur', name: 'fake name' }),
+        modifyKarma: jest.fn(() => 12),
+        getParams: () => ({ icon_emoji: ':fish:' })
+      }
+
+      await MessageHandler.handleBotCommand(
+        _context,
+        { type: Detector.BotCommandType.BOTTOM },
+        'fake-channel'
+      )
+
+      expect(getRankedKarmaTargetsMock).toHaveBeenCalledWith(
+        5,
+        KarmaDao.RankType.BOTTOM
+      )
+
+      const message = [
+        'Name 5: 1 point',
+        'Name 4: 2 points',
+        'Name 3: 3 points',
+        'Name 2: 4 points',
+        'Name 1: 5 points'
+      ].join('\n')
+      expect(_context.bot.postMessageToChannel).toHaveBeenCalledWith(
+        'fake-channel',
+        message,
+        {
+          icon_emoji: ':fish:'
+        }
+      )
+    })
+
+    it('should send a "ranked" message with bottom 2, if the command is `bottom 2`', async () => {
+      const value = [...entries].reverse().slice(0, 2)
+      const getRankedKarmaTargetsMock = jest.fn().mockResolvedValue(value)
+      mock(KarmaDao, 'getRankedKarmaTargets', getRankedKarmaTargetsMock)
+
+      const _context = {
+        ...context,
+        getChannel: () => Promise.resolve({ name: 'fake-channel' } as Channel),
+        getUser: () => Promise.resolve({ id: 'qowieur', name: 'fake name' }),
+        modifyKarma: jest.fn(() => 12),
+        getParams: () => ({ icon_emoji: ':fish:' })
+      }
+
+      await MessageHandler.handleBotCommand(
+        _context,
+        { type: Detector.BotCommandType.BOTTOM_N, payload: 2 },
+        'fake-channel'
+      )
+
+      expect(getRankedKarmaTargetsMock).toHaveBeenCalledWith(
+        2,
+        KarmaDao.RankType.BOTTOM
+      )
+
+      const message = 'Name 5: 1 point\nName 4: 2 points'
+      expect(_context.bot.postMessageToChannel).toHaveBeenCalledWith(
+        'fake-channel',
+        message,
+        {
+          icon_emoji: ':fish:'
+        }
+      )
+    })
+
+    it('should send a help message if the command is `help`', () => {
+      const _context = {
+        ...context,
+        getChannel: () => Promise.resolve({ name: 'fake-channel' } as Channel),
+        getUser: () => Promise.resolve({ id: 'qowieur', name: 'fake name' }),
+        modifyKarma: jest.fn(() => 12),
+        getParams: () => ({ icon_emoji: ':fish:' })
+      }
+
+      MessageHandler.handleBotCommand(
+        _context,
+        { type: Detector.BotCommandType.HELP },
+        'fake-channel'
+      )
+
+      expect(bot.postMessageToChannel).toHaveBeenCalled()
+      const [channel, message, params] = bot.postMessageToChannel.mock.calls[0]
+      expect(channel).toEqual('fake-channel')
+      expect(
+        message.startsWith(`${bot.name} helps you keep score of things`)
+      ).toBe(true)
+      expect(params).toEqual({ icon_emoji: ':fish:' })
+    })
+
+    it('should send an "unknown" message if the command is unknown', () => {
       const _context = {
         ...context,
         getChannel: () => Promise.resolve({ name: 'fake-channel' } as Channel),

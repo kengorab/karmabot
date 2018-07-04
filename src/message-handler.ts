@@ -67,9 +67,25 @@ export async function handleBotCommand(
   switch (botCmd.type) {
     case BotCommandType.TOP:
     case BotCommandType.TOP_N:
-      const amount =
-        botCmd.type === BotCommandType.TOP ? 5 : (botCmd.payload as number)
-      const rankedTargets = await getRankedKarmaTargets(amount)
+    case BotCommandType.BOTTOM:
+    case BotCommandType.BOTTOM_N: {
+      const { type, payload } = botCmd
+
+      let amount
+      if (type === BotCommandType.TOP || type === BotCommandType.BOTTOM) {
+        amount = 5
+      } else {
+        amount = payload as number
+      }
+
+      let ranking
+      if (type === BotCommandType.TOP || type === BotCommandType.TOP_N) {
+        ranking = RankType.TOP
+      } else {
+        ranking = RankType.BOTTOM
+      }
+
+      const rankedTargets = await getRankedKarmaTargets(amount, ranking)
 
       message = rankedTargets
         .map(({ name, total }) => {
@@ -77,6 +93,23 @@ export async function handleBotCommand(
           return `${name}: ${total} ${pointsText}`
         })
         .join('\n')
+      break
+    }
+    case BotCommandType.HELP:
+      const name = bot.name
+      message = [
+        `${name} helps you keep score of things!`,
+        '',
+        '*Basics*',
+        'Saying `something++` will award a point to `something`',
+        'saying `something--` will remove a point from `something`.',
+        '',
+        '*Commands*',
+        `There are also special commands that ${name} supports which you can invoke by saying \`@${name} <command>\`:`,
+        '    `top`: Display the top 5 things with the highest karma',
+        '    `top <number>`: Display the top `<number>` things with the highest karma',
+        '    `help`: Display this information'
+      ].join('\n')
       break
     case BotCommandType.UNKNOWN:
     default: {
