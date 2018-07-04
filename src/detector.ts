@@ -1,4 +1,5 @@
 import { clamp } from 'lodash'
+
 export interface KarmaTarget {
   target: string
   amount: number
@@ -45,4 +46,45 @@ export function getKarmaTarget(
   }
 
   return null
+}
+
+export function isBotCommand(input: string, botUserId: string): boolean {
+  return input.startsWith(`<@${botUserId}>`)
+}
+
+export enum BotCommandType {
+  TOP,
+  TOP_N,
+  UNKNOWN
+}
+
+export interface BotCommand {
+  type: BotCommandType
+  payload?: any
+}
+
+export function getBotCommand(input: string): BotCommand {
+  const cmdSegments = input
+    .split(/\s+/)
+    .map(segment => segment.trim())
+    .slice(1)
+
+  switch (cmdSegments[0]) {
+    case 'top':
+      if (cmdSegments[1]) {
+        const count = parseInt(cmdSegments[1])
+        if (count) {
+          return {
+            type: BotCommandType.TOP_N,
+            payload: parseInt(cmdSegments[1])
+          }
+        } else {
+          return { type: BotCommandType.UNKNOWN }
+        }
+      } else {
+        return { type: BotCommandType.TOP }
+      }
+    default:
+      return { type: BotCommandType.UNKNOWN }
+  }
 }

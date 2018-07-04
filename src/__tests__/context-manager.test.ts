@@ -6,7 +6,8 @@ describe('HandlerContext', () => {
   let mockBot
   beforeEach(() => {
     mockBot = {
-      getChannels: jest.fn(() => Promise.resolve({ channels: [] }))
+      getChannels: jest.fn(() => Promise.resolve({ channels: [] })),
+      getUsers: jest.fn(() => Promise.resolve({ members: [] }))
     }
   })
 
@@ -31,6 +32,20 @@ describe('HandlerContext', () => {
 
       const context = new HandlerContext(mockBot)
       expect(await context.getChannel('qwervzx')).toEqual(channel)
+    })
+  })
+
+  describe('getUser', () => {
+    it('gets the user from the user dict', async () => {
+      const user = { id: 'qwervzx', name: 'user_1' }
+      mockBot.getUsers.mockImplementationOnce(() =>
+        Promise.resolve({
+          members: [user]
+        })
+      )
+
+      const context = new HandlerContext(mockBot)
+      expect(await context.getUser('user_1')).toEqual(user)
     })
   })
 

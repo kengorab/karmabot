@@ -1,4 +1,9 @@
-import { getKarmaTarget } from '../detector'
+import {
+  getKarmaTarget,
+  isBotCommand,
+  getBotCommand,
+  BotCommandType
+} from '../detector'
 
 describe('detector', () => {
   describe('getKarmaTarget', () => {
@@ -230,6 +235,40 @@ describe('detector', () => {
       it('should return true if target (with spaces) is orig user', () => {
         const { isTargetingSelf } = getKarmaTarget('Ayyyy <@UB4YUD> ++', user)!
         expect(isTargetingSelf).toBe(false)
+      })
+    })
+
+    describe('isBotCommand', () => {
+      it("should return true if the input starts with the bot's userId", () => {
+        expect(isBotCommand('<@UAEB42D> some-cmd', 'UAEB42D')).toBe(true)
+      })
+
+      it("should return false if the input doesn't start with the bot's userId", () => {
+        expect(isBotCommand('<@UABE42D> some-cmd', 'UAEB42D')).toBe(false)
+      })
+    })
+
+    describe('getBotCommand', () => {
+      const botId = 'UAEB42D'
+
+      it('should return a TOP command if the input is top', () => {
+        const cmd = getBotCommand(`<@${botId}> top`)
+        expect(cmd).toEqual({ type: BotCommandType.TOP })
+      })
+
+      it('should return a TOP_N command, with payload of `n`, if the input is top <number>', () => {
+        const cmd = getBotCommand(`<@${botId}> top 5`)
+        expect(cmd).toEqual({ type: BotCommandType.TOP_N, payload: 5 })
+      })
+
+      it('should fail if the `top_n` command is given a non-number arg', () => {
+        const cmd = getBotCommand(`<@${botId}> top five`)
+        expect(cmd).toEqual({ type: BotCommandType.UNKNOWN })
+      })
+
+      it("should return an UNKNOWN command if the command isn't recognized", () => {
+        const cmd = getBotCommand(`<@${botId}> unknown-command`)
+        expect(cmd).toEqual({ type: BotCommandType.UNKNOWN })
       })
     })
   })

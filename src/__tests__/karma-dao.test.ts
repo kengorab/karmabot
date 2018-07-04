@@ -58,6 +58,67 @@ describe('KarmaDao', () => {
     })
   })
 
+  describe('getRankedKarmaTargets', () => {
+    it('should return 0 rows if there is nothing in the database', async () => {
+      const rows = await KarmaDao.getRankedKarmaTargets(
+        5,
+        KarmaDao.RankType.TOP,
+        testDbPromise
+      )
+      expect(rows.length).toBe(0)
+    })
+
+    it('should return 1 row if there are entries for a karma target', async () => {
+      await alasql(`
+        insert into karma_transactions (karma_target, delta, actor)
+        values ('Claudio', 3, 'Ken'), ('Claudio', -1, 'Someone Else');
+      `)
+
+      const rows = await KarmaDao.getRankedKarmaTargets(
+        5,
+        KarmaDao.RankType.TOP,
+        testDbPromise
+      )
+      expect(rows).toEqual([new KarmaDao.KarmaTarget('Claudio', 2)])
+    })
+
+    it('should limit to n rows, in desc sorted order, if there are entries for many karma targets', async () => {
+      await alasql(`
+        insert into karma_transactions (karma_target, delta, actor)
+        values ('E1', 2, 'User'), ('E2', -1, 'User'), ('E3', 1, 'User'), ('E4', 4, 'User'), ('E5', 3, 'User');
+      `)
+
+      const rows = await KarmaDao.getRankedKarmaTargets(
+        3,
+        KarmaDao.RankType.TOP,
+        testDbPromise
+      )
+      expect(rows).toEqual([
+        new KarmaDao.KarmaTarget('E4', 4),
+        new KarmaDao.KarmaTarget('E5', 3),
+        new KarmaDao.KarmaTarget('E1', 2)
+      ])
+    })
+
+    it('should limit to n rows, in asc sorted order, if there are entries for many karma targets', async () => {
+      await alasql(`
+        insert into karma_transactions (karma_target, delta, actor)
+        values ('E1', 2, 'User'), ('E2', -1, 'User'), ('E3', 1, 'User'), ('E4', 4, 'User'), ('E5', 3, 'User');
+      `)
+
+      const rows = await KarmaDao.getRankedKarmaTargets(
+        3,
+        KarmaDao.RankType.BOTTOM,
+        testDbPromise
+      )
+      expect(rows).toEqual([
+        new KarmaDao.KarmaTarget('E2', -1),
+        new KarmaDao.KarmaTarget('E3', 1),
+        new KarmaDao.KarmaTarget('E1', 2)
+      ])
+    })
+  })
+
   describe('modifyKarma', () => {
     it('should insert a transaction into the database for a new target', async () => {
       await KarmaDao.modifyKarma('Claudio', 3, 'Ken', testDbPromise)

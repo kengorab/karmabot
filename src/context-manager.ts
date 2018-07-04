@@ -1,4 +1,4 @@
-import SlackBot, { PostMessageParams, Channel } from 'slackbots'
+import SlackBot, { PostMessageParams, Channel, User } from 'slackbots'
 import { keyBy, Dictionary } from 'lodash'
 import * as KarmaDao from './karma-dao'
 
@@ -9,11 +9,16 @@ const params: PostMessageParams = {
 
 export default class HandlerContext {
   private static channels: Promise<Dictionary<Channel>>
+  private static users: Promise<Dictionary<User>>
 
   constructor(public readonly bot: SlackBot) {
     HandlerContext.channels = bot
       .getChannels()
       .then(({ channels }) => keyBy(channels, 'id'))
+
+    HandlerContext.users = bot
+      .getUsers()
+      .then(({ members }) => keyBy(members, 'name'))
   }
 
   public log = (...args: any[]) => console.log(...args)
@@ -23,6 +28,11 @@ export default class HandlerContext {
   public async getChannel(id: string): Promise<Channel> {
     const channels = await HandlerContext.channels
     return channels[id]
+  }
+
+  public async getUser(name: string): Promise<User> {
+    const users = await HandlerContext.users
+    return users[name]
   }
 
   public async modifyKarma(

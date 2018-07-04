@@ -41,6 +41,38 @@ export async function getKarmaTarget(
   return new KarmaTarget(karma_target as string, total as number)
 }
 
+export enum RankType {
+  TOP,
+  BOTTOM
+}
+
+export async function getRankedKarmaTargets(
+  amount: number,
+  rankType: RankType = RankType.TOP,
+  clientPromise: Promise<Client> = _clientPromise
+): Promise<KarmaTarget[]> {
+  const client = await clientPromise
+
+  const orderBy = rankType === RankType.TOP ? 'desc' : 'asc'
+
+  const sql = `
+    select karma_target, sum(delta) as total
+    from karma_transactions
+    group by karma_target
+    order by total ${orderBy}
+    limit $1;
+  `
+  const values = [amount]
+  const { rows } = await client.query(sql, values)
+
+  if (rows.length === 0 || !rows[0].karma_target) return []
+
+  return rows.map(
+    ({ karma_target, total }) =>
+      new KarmaTarget(karma_target as string, total as number)
+  )
+}
+
 export async function modifyKarma(
   target: string,
   amount: number,
