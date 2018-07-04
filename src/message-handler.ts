@@ -30,8 +30,7 @@ export async function messageHandler(
   const botUser = await getUser(bot.name)
   if (isBotCommand(text, botUser.id)) {
     const botCmd = getBotCommand(text)
-    // handleBotCommand(context, botCmd, channel.name)
-    await handleBotCommand(bot, getParams, botCmd, channel.name)
+    await handleBotCommand(context, botCmd, channel.name)
     return true
   }
 
