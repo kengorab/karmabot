@@ -1,5 +1,7 @@
 import dotenv from 'dotenv'
 import { Client } from 'pg'
+import { groupBy, Dictionary } from 'lodash'
+import moment from 'moment'
 
 dotenv.config()
 const { DATABASE_URL: databaseUrl } = process.env
@@ -71,6 +73,136 @@ export async function getRankedKarmaTargets(
     ({ karma_target, total }) =>
       new KarmaTarget(karma_target as string, total as number)
   )
+}
+
+export enum BucketType {
+  DAILY,
+  WEEKLY,
+  MONTHLY
+}
+
+type Bucket = { name: string } & { [karmaTarget: string]: number }
+
+interface DbRow {
+  karma_target: string
+  sum: string
+  bucket: string
+}
+
+function getRankedTargets(rows: DbRow[], amount: number, rankType: RankType) {
+  const sums = rows.reduce<{ [karmaTarget: string]: number }>(
+    (acc, row) => ({
+      ...acc,
+      [row.karma_target]: (acc[row.karma_target] || 0) + parseInt(row.sum)
+    }),
+    {}
+  )
+  const rankedTargets = Object.entries(sums)
+    .sort(
+      ([_a, vA], [_b, vB]) => (rankType === RankType.TOP ? 1 : -1) * (vB - vA)
+    )
+    .map(([name, _]) => name)
+  return rankedTargets.slice(0, amount)
+}
+
+function getCumulativeBuckets(
+  buckets: Bucket[],
+  bucketType: BucketType,
+  dateFormat: string,
+  targets: string[],
+  now: moment.Moment = moment()
+): Bucket[] {
+  const presentBuckets: { [name: string]: Bucket } = buckets.reduce(
+    (acc, bucket) => ({ ...acc, [bucket.name]: bucket }),
+    {}
+  )
+
+  const allBuckets: Bucket[] = []
+  const start = moment(buckets[0].name, dateFormat).startOf('day')
+  const end = now
+  while (start.isBefore(end)) {
+    if (presentBuckets[start.format(dateFormat)]) {
+      allBuckets.push(presentBuckets[start.format(dateFormat)])
+    } else {
+      allBuckets.push({ name: start.format(dateFormat) } as Bucket)
+    }
+
+    if (bucketType === BucketType.DAILY) {
+      start.add(1, 'day')
+    } else if (bucketType === BucketType.WEEKLY) {
+      start.add(1, 'week')
+    } else if (bucketType === BucketType.MONTHLY) {
+      start.add(1, 'month')
+    }
+  }
+
+  return allBuckets.map((bucket, i) =>
+    targets.reduce(
+      (acc, target) => {
+        const prevValue = i === 0 ? 0 : allBuckets[i - 1][target] || 0
+        const sum = prevValue + (bucket[target] || 0)
+        return { ...acc, [target]: sum }
+      },
+      { name: bucket.name } as Bucket
+    )
+  )
+}
+
+export async function getRankedBucketedKarmaTargets(
+  amount: number,
+  maxNumBuckets: number,
+  rankType: RankType = RankType.TOP,
+  bucketType: BucketType = BucketType.DAILY,
+  clientPromise: Promise<Client> = _clientPromise
+): Promise<Bucket[]> {
+  const client = await clientPromise
+
+  let sqlDateFmt = ''
+  let dateFormat = ''
+  if (bucketType === BucketType.DAILY) {
+    sqlDateFmt = 'day'
+    dateFormat = 'MMM D, YYYY'
+  } else if (bucketType === BucketType.WEEKLY) {
+    sqlDateFmt = 'week'
+    dateFormat = 'MMM D, YYYY'
+  } else if (bucketType === BucketType.MONTHLY) {
+    sqlDateFmt = 'month'
+    dateFormat = 'MMM YYYY'
+  }
+
+  const sql = `
+    select karma_target, sum(delta), date_trunc('${sqlDateFmt}', karma_date) as bucket
+    from karma_transactions group by bucket, karma_target;
+  `
+  const { rows }: { rows: DbRow[] } = await client.query(sql)
+  if (rows.length === 0 || !rows[0].karma_target) return []
+
+  const bucketedRows = groupBy(rows, 'bucket')
+  const rankedTargets = getRankedTargets(rows, amount, rankType)
+
+  const bucketedData: Bucket[] = Object.values(bucketedRows).map(
+    valuesForBucket => {
+      const bucketName = moment(valuesForBucket[0].bucket).format(dateFormat)
+      return valuesForBucket
+        .filter(value => rankedTargets.includes(value.karma_target))
+        .reduce(
+          (acc, value) => ({
+            ...acc,
+            [value.karma_target]: parseInt(value.sum)
+          }),
+          { name: bucketName } as Bucket
+        )
+    }
+  )
+  const completedData = getCumulativeBuckets(
+    bucketedData,
+    bucketType,
+    dateFormat,
+    rankedTargets
+  )
+  const end = completedData.length
+  const start = completedData.length - maxNumBuckets
+  return completedData.slice(start, end)
 }
 
 export async function modifyKarma(

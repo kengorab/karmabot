@@ -5,6 +5,7 @@
     "module": "commonjs",
     "sourceMap": true,
     "outDir": "./build",
+    "jsx": "react",
 
     /* Strict Type-Checking Options */
     "strict": true,
